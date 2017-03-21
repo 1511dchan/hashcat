@@ -228,10 +228,70 @@ int user_options_getopt (hashcat_ctx_t *hashcat_ctx, int argc, char **argv)
 
   int c = -1;
 
+  int option_index;
+
   optind = 1;
   optopt = 0;
 
-  int option_index = 0;
+  option_index = 0;
+
+  while (((c = getopt_long (argc, argv, short_options, long_options, &option_index)) != -1) && optopt == 0)
+  {
+    switch (c)
+    {
+      case IDX_REMOVE_TIMER:
+      case IDX_DEBUG_MODE:
+      case IDX_SKIP:
+      case IDX_LIMIT:
+      case IDX_STATUS_TIMER:
+      case IDX_WEAK_HASH_THRESHOLD:
+      case IDX_HASH_MODE:
+      case IDX_RUNTIME:
+      case IDX_ATTACK_MODE:
+      case IDX_RP_GEN:
+      case IDX_RP_GEN_FUNC_MIN:
+      case IDX_RP_GEN_FUNC_MAX:
+      case IDX_RP_GEN_SEED:
+      case IDX_MARKOV_THRESHOLD:
+      case IDX_OUTFILE_FORMAT:
+      case IDX_OUTFILE_CHECK_TIMER:
+      case IDX_OPENCL_VECTOR_WIDTH:
+      case IDX_WORKLOAD_PROFILE:
+      case IDX_KERNEL_ACCEL:
+      case IDX_KERNEL_LOOPS:
+      case IDX_NVIDIA_SPIN_DAMP:
+      case IDX_GPU_TEMP_ABORT:
+      case IDX_GPU_TEMP_RETAIN:
+      case IDX_HCCAPX_MESSAGE_PAIR:
+      case IDX_NONCE_ERROR_CORRECTIONS:
+      case IDX_VERACRYPT_PIM:
+      case IDX_SEGMENT_SIZE:
+      case IDX_SCRYPT_TMTO:
+      case IDX_BITMAP_MIN:
+      case IDX_BITMAP_MAX:
+      case IDX_INCREMENT_MIN:
+      case IDX_INCREMENT_MAX:
+
+      if (hc_string_is_digit (optarg) == false)
+      {
+        event_log_error (hashcat_ctx, "Not a number '%s'", optarg);
+
+        return -1;
+      }
+    }
+  }
+
+  if (optopt != 0)
+  {
+    event_log_error (hashcat_ctx, "Invalid argument specified");
+
+    return -1;
+  }
+
+  optind = 1;
+  optopt = 0;
+
+  option_index = 0;
 
   while (((c = getopt_long (argc, argv, short_options, long_options, &option_index)) != -1) && optopt == 0)
   {
@@ -798,6 +858,96 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
 
         return -1;
       }
+    }
+  }
+
+  if (user_options->markov_hcstat != NULL)
+  {
+    if (strlen (user_options->markov_hcstat) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option markov-hcstat can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->restore_file_path != NULL)
+  {
+    if (strlen (user_options->restore_file_path) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option restore-file-path can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->outfile != NULL)
+  {
+    if (strlen (user_options->outfile) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option outfile can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->debug_file != NULL)
+  {
+    if (strlen (user_options->debug_file) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option debug-file can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->session != NULL)
+  {
+    if (strlen (user_options->session) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option session can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->cpu_affinity != NULL)
+  {
+    if (strlen (user_options->cpu_affinity) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option cpu-affinity can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->opencl_platforms != NULL)
+  {
+    if (strlen (user_options->opencl_platforms) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option opencl-platforms can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->opencl_devices != NULL)
+  {
+    if (strlen (user_options->opencl_devices) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option opencl-devices can not have length zero string");
+
+      return -1;
+    }
+  }
+
+  if (user_options->opencl_device_types != NULL)
+  {
+    if (strlen (user_options->opencl_device_types) == 0)
+    {
+      event_log_error (hashcat_ctx, "If selected, option opencl-device-types can not have length zero string");
+
+      return -1;
     }
   }
 
@@ -1439,6 +1589,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_exist (user_options_extra->hc_hash) == true)
     {
+      if (hc_path_is_file (user_options_extra->hc_hash) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", user_options_extra->hc_hash);
+
+        return -1;
+      }
+
       if (hc_path_read (user_options_extra->hc_hash) == false)
       {
         event_log_error (hashcat_ctx, "%s: %s", user_options_extra->hc_hash, strerror (errno));
@@ -1474,6 +1631,20 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
         return -1;
       }
+
+      if (hc_path_is_file (rp_file) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", rp_file);
+
+        return -1;
+      }
+
+      if (hc_path_read (rp_file) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: %s", rp_file, strerror (errno));
+
+        return -1;
+      }
     }
   }
   else if (user_options->attack_mode == ATTACK_MODE_COMBI)
@@ -1485,9 +1656,37 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
       char *dictfile1 = user_options_extra->hc_workv[0];
       char *dictfile2 = user_options_extra->hc_workv[1];
 
+      if (hc_path_exist (dictfile1) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: %s", dictfile1, strerror (errno));
+
+        return -1;
+      }
+
+      if (hc_path_is_file (dictfile1) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", dictfile1);
+
+        return -1;
+      }
+
       if (hc_path_read (dictfile1) == false)
       {
         event_log_error (hashcat_ctx, "%s: %s", dictfile1, strerror (errno));
+
+        return -1;
+      }
+
+      if (hc_path_exist (dictfile2) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: %s", dictfile2, strerror (errno));
+
+        return -1;
+      }
+
+      if (hc_path_is_file (dictfile2) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", dictfile2);
 
         return -1;
       }
@@ -1510,6 +1709,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (maskfile) == true)
       {
+        if (hc_path_is_file (maskfile) == false)
+        {
+          event_log_error (hashcat_ctx, "%s: unsupported file-type", maskfile);
+
+          return -1;
+        }
+
         if (hc_path_read (maskfile) == false)
         {
           event_log_error (hashcat_ctx, "%s: %s", maskfile, strerror (errno));
@@ -1540,6 +1746,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (maskfile) == true)
       {
+        if (hc_path_is_file (maskfile) == false)
+        {
+          event_log_error (hashcat_ctx, "%s: unsupported file-type", maskfile);
+
+          return -1;
+        }
+
         if (hc_path_read (maskfile) == false)
         {
           event_log_error (hashcat_ctx, "%s: %s", maskfile, strerror (errno));
@@ -1570,6 +1783,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (maskfile) == true)
       {
+        if (hc_path_is_file (maskfile) == false)
+        {
+          event_log_error (hashcat_ctx, "%s: unsupported file-type", maskfile);
+
+          return -1;
+        }
+
         if (hc_path_read (maskfile) == false)
         {
           event_log_error (hashcat_ctx, "%s: %s", maskfile, strerror (errno));
@@ -1586,6 +1806,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_exist (logfile_ctx->logfile) == true)
     {
+      if (hc_path_is_file (logfile_ctx->logfile) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", logfile_ctx->logfile);
+
+        return -1;
+      }
+
       if (hc_path_write (logfile_ctx->logfile) == false)
       {
         event_log_error (hashcat_ctx, "%s: %s", logfile_ctx->logfile, strerror (errno));
@@ -1610,9 +1837,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_exist (outcheck_ctx->root_directory) == true)
     {
-      const bool is_dir = hc_path_is_directory (outcheck_ctx->root_directory);
-
-      if (is_dir == false)
+      if (hc_path_is_directory (outcheck_ctx->root_directory) == false)
       {
         event_log_error (hashcat_ctx, "Directory specified in outfile-check '%s' is not a directory", outcheck_ctx->root_directory);
 
@@ -1627,6 +1852,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_exist (outfile_ctx->filename) == true)
     {
+      if (hc_path_is_file (outfile_ctx->filename) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", outfile_ctx->filename);
+
+        return -1;
+      }
+
       if (hc_path_write (outfile_ctx->filename) == false)
       {
         event_log_error (hashcat_ctx, "%s: %s", outfile_ctx->filename, strerror (errno));
@@ -1730,6 +1962,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
   if (hc_path_exist (pidfile_ctx->filename) == true)
   {
+    if (hc_path_is_file (pidfile_ctx->filename) == false)
+    {
+      event_log_error (hashcat_ctx, "%s: unsupported file-type", pidfile_ctx->filename);
+
+      return -1;
+    }
+
     if (hc_path_write (pidfile_ctx->filename) == false)
     {
       event_log_error (hashcat_ctx, "%s: %s", pidfile_ctx->filename, strerror (errno));
@@ -1753,6 +1992,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_exist (potfile_ctx->filename) == true)
     {
+      if (hc_path_is_file (potfile_ctx->filename) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", potfile_ctx->filename);
+
+        return -1;
+      }
+
       if (hc_path_write (potfile_ctx->filename) == false)
       {
         event_log_error (hashcat_ctx, "%s: %s", potfile_ctx->filename, strerror (errno));
@@ -1777,6 +2023,13 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_exist (dictstat_ctx->filename) == true)
     {
+      if (hc_path_is_file (dictstat_ctx->filename) == false)
+      {
+        event_log_error (hashcat_ctx, "%s: unsupported file-type", dictstat_ctx->filename);
+
+        return -1;
+      }
+
       if (hc_path_write (dictstat_ctx->filename) == false)
       {
         event_log_error (hashcat_ctx, "%s: %s", dictstat_ctx->filename, strerror (errno));
